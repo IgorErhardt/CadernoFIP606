@@ -1,0 +1,172 @@
+---
+title: "Modelos"
+warning: False
+---
+
+### Modelos lineares generalizados
+
+Os modelos lineares generalizados permitem a modelagem de variáveis respostas que não seguem a distribuição normal. São necessáio definir três componentes básico:
+
+-   **Distribuição da probabilidade**: padrão de distribuição da variábel resposta. De acordo com a natureza da variável sua distribuição adota comportamentos distinto, sendo necessário respeitar essa distribuição. Por exemplo: Dados contínuos com variância constante seguem a distruibuição **gaussiana/normal**. Dados de contagem/frequência seguem a distribuição de **Poisson**. Dados de probabilidade seguem a distribuição **binomial**.
+
+-   **Preditor linear**: Combinação das variáveis preditoras e seus respectivos coeficientes.
+
+    $$
+    \eta = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_p X_p
+    $$
+
+-   **Função de ligação**: É a função monotônica que relaciona o preditor linear a média da distribuição, garantindo que o valor predito permaneça dentro da distribuição por meio da tranformação do valor.
+
+-   Identidade (Gaussiana)
+
+    $$
+    g(\mu) = \eta
+    $$
+
+-   Log (Poisson)
+
+$$
+g(\mu) = \log(\mu)
+$$
+
+-   Logito (Binomial)
+
+$$
+g(\mu) = \log\left( \frac{\mu}{1 - \mu} \right)
+$$
+
+```{R}
+library(DHARMa)
+library(emmeans)
+library(multcomp)
+library(car)
+library(performance)
+library(gsheet)
+library(ggplot2)
+library(agricolae)
+library(epifitter)
+library(dplyr)
+library(MASS)
+library(tidyverse)
+library(lme4)
+library(drc)
+library(ec50estimator)
+```
+
+Inicialmente vamos verificar o comportamento e homogenidade das variâncias, para confirmar que os métodos paramétricos não podem ser adotados. Dessa vamos utilizaremos o DHARMa para visualização dos pressupostos.
+
+```{R}
+InsectsDataframe = InsectSprays
+InsectsDataframe |>
+  ggplot(aes(spray, count))+
+  geom_boxplot(outlier.color=NULL)+
+  geom_jitter(width=0.1)
+
+InsectLM = lm(count ~ spray, data=InsectsDataframe)
+plot(simulateResiduals(InsectLM))
+shapiro.test(residuals(InsectLM))
+```
+
+Ajustando um glm com a distribuição Poisson, adequada a natureza do conjuto de dados, podemos indetificar os grupos distintos de inseticidas.
+
+```{R}
+InsectGLM= glm(count ~spray, data = InsectsDataframe, family=poisson)
+mediasGLM = emmeans(InsectGLM, ~spray, type=("response"))
+cld(mediasGLM)
+check_model(InsectGLM)
+summary(InsectGLM)
+```
+
+### Modelos Mistos
+
+Modelos mistos permitem trabalharmos com dois diferentes tipos de efeitos ao mesmo tempo. Efeitos fixos, são os efeitos a nível de população cujo impacto sobre a resposta buscamos compreender, esses efeitos deve persistir ao longo das repetições uma vez que não são fonte de aleatoriedade. Efeitos aleatórios, representam fontes de variabilidade que não são de interesse, indicando assim a tendência de variação ao longo de níves de agrupamento.
+
+A utilização de modelos mistos auxiliam a evitar a consideração equivocada de amostras independentes, quando na realidade não são, denominado erro de "pseud-replicação". Ao tratar a população como um todo levando a um exagerado grau de liberdade e p-valor, levando a conclusões equivocadas. Os modelos mistos são capazes de reconhecer a estrutura de correlação entre os agrupamentos, evitando estimativas enviesadas dos coeficientes dos efeitos fixos.
+
+De forma simplificada, são estimados simultaneamente os coeficientes globais para cada variável preditora dos efeitos fixos, enquanto se é predito o desvio dos coeficientes estimados em cada grupo em relação aos coeficientes globais. Ocorre então um ajuste, "encolhimento", em que os valores de coeficientes são ajustados para minimizar o desvio reduzindo a variância total.
+
+$$
+\mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \mathbf{Z}\boldsymbol{u} + \boldsymbol{\epsilon}, \quad \boldsymbol{u} \sim \mathcal{N}(\mathbf{0},\,\mathbf{G}), \quad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0},\,\mathbf{R})
+$$
+
+$$
+\begin{array}{ll}\hline\text{Símbolo} & \text{Definição} \\\hline\mathbf{y} & \text{vetor de observações (n×1), }E(\mathbf{y}) = \mathbf{X}\boldsymbol{\beta}\\\mathbf{X} & \text{matriz de projeto dos efeitos fixos (n×p)}\\\boldsymbol{\beta} & \text{parâmetros dos efeitos fixos (p×1), estimados via ML/REML}\\\mathbf{Z} & \text{matriz de projeto dos efeitos aleatórios (n×q)}\\\mathbf{u} & \text{efeitos aleatórios (q×1), }E(\mathbf{u})=0,\,\mathrm{Var}(\mathbf{u})=\mathbf{G}\\\boldsymbol{\epsilon} & \text{erros residuais (n×1), }E(\boldsymbol{\epsilon})=0,\,\mathrm{Var}(\boldsymbol{\epsilon})=\mathbf{R}\\\mathbf{G} & \text{matriz de covariância dos efeitos aleatórios (q×q)}\\\mathbf{R} & \text{matriz de covariância dos erros residuais (n×n)}\\\hline\end{array}
+$$
+
+Para exemplificar, consideremos o conjuto de dados abaixo em que foi observada a produtividade de cada híbrido sob dois diferentes métodos, em um experimento dirigido em estrutura DBC.
+
+```{R}
+CornDf = gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=1345524759#gid=1345524759")
+CornDf
+```
+
+Podemos tratar os blocos como fator aleatório de forma a minimizar o impactos da variabilidade entre blocos nas estimativas. Enquanto avaliamos a influência do efeito fixos index, hybrid e a interação dos mesmo.
+
+```{R}
+CornDf$Id = interaction(CornDf$hybrid, CornDf$block)
+MCorn = lmer(index ~hybrid*method + (1|block:Id), data=CornDf)
+car::Anova(MCorn)
+plot(simulateResiduals(MCorn))
+CornDf$predicted <- predict(MCorn)
+```
+
+Utilizando a tabela Anova, podemos identificar quais efeitos fixos apresentaram diferenças significativas, e utilizando a biblioteca DHARMa podemos visualizar a normalide e homocedasticidade dos resíduos.
+
+Seguindo a investigação podemos verificar quais híbridos apresentaram se distinguem entre si, em função do método.
+
+```{R}
+CornMeans = emmeans(MCorn, ~hybrid | method)
+cld(CornMeans, Letters = letters)
+```
+
+Ou então como os métodos se distinguem entre si em função do híbrido.
+
+```{R}
+CornMeans = emmeans(MCorn, ~method | hybrid)
+cld(CornMeans, Letters = letters)
+```
+
+### Modelos Não Lineares
+
+Modelos não lineares são utilizados quando a relação entre a variável resposta e os preditores não pode ser adequadamente representada por uma combinação linear simples, mesmo após transformações. Diferentemente dos modelos lineares e generalizados, nesses modelos a forma funcional entre as variáveis é explicitamente não linear, podendo envolver exponenciais, logaritmos, polinômios de grau maior, funções sigmoides, entre outras.
+
+A modelagem não linear envolve a especificação de uma função paramétrica, cujo ajuste é feito geralmente por métodos iterativos de otimização, como mínimos quadrados não lineares ou máxima verossimilhança.
+
+Como exemplo vamos trabalhar com um conjunto de dados em que é avaliada a sensibilidade a fungicidas, a partir da contagem de germinação. Naturalmente esse tipo de dado é não linear, adotando um comportamento logístico. Vamos considerar a germinação média entre as reptições e analisar somente um fungicida para maior simplicidade. Para ajuste do modelo utilizaremos a função drm(), especificiando que deve-se utilizar o modelo log logistico (LL.3)
+
+```{R}
+FungicideSensibility = gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=465348652#gid=465348652")
+
+FungicideSensibility |> 
+  group_by(code, dose) |>
+  summarise(germinationMean = mean(germination)) |>
+  ggplot(aes(dose, germinationMean))+
+  geom_point()+
+  facet_wrap(~code)
+
+FGT43 = FungicideSensibility |> 
+  group_by(code, dose) |>
+  summarise(germinationMean = mean(germination)) |>
+  filter(code=="FGT43")
+FGT43Model = drm(germinationMean ~dose,
+                 data=FGT43,
+                 fct=LL.3())
+plot(FGT43Model)
+summary(FGT43Model)
+AIC(FGT43Model)
+```
+
+Como um complemento podemos utilizar a já estabelecida referência de dose efetiva para reduzir 50% para comparar os fungicidas. Utilizando a função estimate_EC50()
+
+```{R}
+EC50Df = estimate_EC50(germination ~ dose,
+              data=FungicideSensibility,
+              isolate_col = "code",
+              strata_col = "state",
+              interval = "delta",
+              fct= drc::LL.3())
+EC50Df|>
+  ggplot(aes(reorder(ID,Estimate), Estimate))+
+  geom_point()+
+  coord_flip()
+```

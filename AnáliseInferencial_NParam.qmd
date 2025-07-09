@@ -1,0 +1,122 @@
+---
+title: "Análise Não Paramétrica"
+warning: False
+---
+
+## Análise inferencial não paramétrica
+
+Os testes não paramétricos são procedimentos estatísticos que não exigem suposições estritas sobre a forma da distribuição dos dados (por exemplo, normalidade). Em vez de trabalharem diretamente com valores observados, muitos deles se baseiam em rankings (posições relativas) ou em contagens de concordâncias/discordâncias, tornando-os mais robustos a outliers, assimetrias ou pequenas amostras. Podemos distinguilos entre pareados ou não pareados em função da depêndencia das amostras.
+
+```{R}
+# Importação de bibliotecas
+library(gsheet)
+library(ggplot2)
+library(tidyverse)
+library(report)
+library(rstatix)
+library(ggpubr)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+library(agricolae)
+library(dplyr)
+```
+
+### Teste de Wilcoxon (Mann-Whitney)
+
+### Pareado
+
+Utilizando o teste de wilcoxon podemos identificar se há diferença entre dois grupos com observações indepentes ou depentes. A partir da combinação de dois grupos ordena-se um ranking total, e proseggue com a investigação a partir da soma dos ranking dos respectivos grupos.
+
+Na versão pareada, são rankeadas as diferenças diferentes de 0 entre cada par. Então é realizada a soma das diferenças positivas e negativas, adotando o menor valor. Para conjunto pequenos (até 25 observações) utiliza-se a tabela de Wilcoxon para determinar o p-valor. Para grandes conjuntos adota-se a aproximação normal.
+
+$$
+d_i = x_i - y_i,\quad i=1,\dots,n \\ \\R_i : \text{posto de }|d_i|
+$$
+
+$$
+W = \sum_{d_i>0} R_i,$$
+
+$$
+W = \min(W^+,W^-)
+$$
+
+Utilizando um conjunto de dados em que foi observado uma classificação por múltiplos avaliadores com e sem auxílio de uma escala, podemos exemplificar a aplicação de um teste de willcox pareado para identificarmos se houve diferença na performance da avaliação mediante ao uso da escala. Antes de execução do teste podemos averiguar que não há homocedasticidade ou distribuição normal do conjunto de dados, utilizando o teste F e o teste de Shapiro Wilk. Prosseguindo com o teste de Wilcox pareado, podemos observar que há diferença significativa entre os grupos.
+
+```{R}
+ScaleDataframe = gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=1729131173#gid=1729131173")
+
+Unaided = ScaleDataframe %>%
+  filter(assessment=="Unaided") %>%
+  dplyr::select(acuracia) %>%
+  pull()
+
+Aided = ScaleDataframe %>%
+  filter(assessment=="Aided1") %>%
+  dplyr::select(acuracia) %>%
+  pull()
+
+var.test(Unaided, Aided)
+shapiro.test(Unaided)
+shapiro.test(Aided)
+
+wilcox.test(Unaided, Aided, paired=TRUE)
+```
+
+#### Não pareado
+
+Utilizando um conjunto de dados relacionado a contagem de insetos após explosição a inseticidas utilizaremos o wilcox não pareado para verificar se há diferença entre o spray A e o C. Seguindo o protocolo demonstrado anteriormente, iremos averiguar a normalidade dos resíduos do modelo ajustado pelo teste de Anova utilizando o teste de Shapiro Wilk. Ao observarmos um p-valor menor que 0.05, constatamos que os resíduos não seguem a distribuição normal, invalidando o uso de Anova.
+
+```{R}
+InsectsDataframe = InsectSprays
+InsectsDataframe |>
+  ggplot(aes(spray, count))+
+  geom_boxplot(outlier.color=NULL)+
+  geom_jitter(width=0.1)
+AnovaModel <- aov(count ~ spray, data = InsectsDataframe)
+hist(residuals(AnovaModel), main = "Histograma dos Resíduos",
+     xlab='Resíduos', ylab = 'Frequência')
+shapiro.test(residuals(AnovaModel))
+```
+
+Dessa forma um alternativa seria utilizar o teste de Willcoxon não pareado. Na sua versão não pareada, a partir das somas dos ranking de cada grupo (R) é calculado U , adotando o menor valor de U encontrado obtem-se o p-valor a partir da distribuição de U. Como teste compara somente dois grupos, podemos selecionar dois inseticidas e compara-los. Observando que há diferença entre os inseticidas A e C.
+
+$$ U_1 \;=\; n_1\,n_2 \;+\; \frac{n_1\,(n_1 + 1)}{2} \;-\; R_1 $$
+
+$$ ou $$
+
+$$ U_2 \;=\; n_1\,n_2 \;+\; \frac{n_2\,(n_2 + 1)}{2} \;-\; R_2 $$
+
+$$
+U = \min(U_1,U_2)
+$$
+
+```{R}
+InsectsDataframe = InsectSprays
+SprayA = InsectsDataframe |>
+  filter(spray=="A") |>
+  dplyr::select(count) |>
+  pull()
+
+SprayC = InsectsDataframe |>
+  filter(spray=="C") |>
+  dplyr::select(count) |>
+  pull()
+
+wilcox.test(SprayA, SprayC, paired=FALSE)
+```
+
+### Teste de Kruskall-Wallis
+
+O teste de Kruskall-Wallis permite a comparação de mais de 2 grupos, que não atendem a distribuição normal. Para possibilitar a comparação, ao invés de comprar os valores, performa a organização de todos valores em ranking, e compara a soma do ranking de cada grupo. A hipótese nula (H0) considera que os grupos são iguais, enquanto a hipótese alternativa (H1) considera que há diferença em algum dos grupos. A soma dos ranking ao quadrado divida pelo número de obbservações do respectivo grupo, é normalizada por uma constante construida a partir do número total de observações, e subtraida por um termo de correção que visa centralizar a distribuição de forma em que sob condições de H0 H é igual a aproximadamente.
+
+$$
+H = \frac{12}{N(N+1)} \sum_{i=1}^{k} \frac{R_i^2}{n_i} - 3(N+1)
+$$
+
+O valor de H implica sobre a diferença entre a soma dos rankings, ao ser comparado a uma distribuição chi-quadrado com grau de liberdade k-1. Obtendo assim um p-valor, caso menor do que alfa rejeita-se H0, e afirma-se que há ao menos uma grupo distinto.
+
+```{R}
+InsectsDataframe = InsectSprays
+kruskal(InsectsDataframe$count, InsectsDataframe$spray, group=TRUE, console=TRUE)
+```

@@ -1,0 +1,355 @@
+---
+title: "Caderno FIP606"
+warning: False
+---
+
+# 1. Operações Básicas
+
+## 1.1 Atribuição e Variáveis
+
+-   **Operadores de atribuição**: `<-` é o mais usado, embora `=` funcione.
+
+    ```{R}
+    x <- 10        # atribui 10 a x
+    y = 5          # atribui 5 a y
+    ```
+
+-   **Nomes de variáveis**: usam letras, números, `.` e `_`, mas não podem começar com número ou ponto seguido de número. Exemplo:
+
+    ```{R}
+    pontuacao_aluno <- 90
+    .variavel_oculta <- 1   # válido, mas desaconselhado
+    ```
+
+## 1.2 Vetores e Operações Elementares
+
+-   **Criar vetores**: `c()`, `:` e `seq()`.
+
+    ```{R}
+    nums <- c(1, 2, 3, 4)
+    seq_vezes <- seq(from=0, to=1, length.out=5)
+    intervalo <- 1:5
+    ```
+
+-   **Operações aritméticas**:
+
+    ```{R}
+    a <- c(1,2,3); b <- c(4,5,6)
+    a + b   # c(5,7,9)
+    a * 2   # c(2,4,6)
+    ```
+
+-   **Regra de reciclagem**: vetores menores se repetem para igualar o tamanho:
+
+    ``` r
+    c(1,2) + c(1,2,3,4)  # c(2,4,4,6)
+    ```
+
+## 1.3 Operadores Lógicos e de Comparação
+
+-   **Comparação**: `<`, `>`, `<=`, `>=`, `==`, `!=`.
+
+-   **Lógicos**: `&` (E elemento a elemento), `|` (OU elemento a elemento), `!` (NÃO). Use `&&`, `||` para condição única.
+
+    ```{R}
+    x <- c(1, 2, 3)
+    x > 1       # c(FALSE, TRUE, TRUE)
+    x >= 2 & x <= 3   # c(FALSE, TRUE, TRUE)
+    ```
+
+## 1.4 Valores Ausentes e Especiais
+
+-   `NA`: falta de dado; `NaN`: resultado indefinido; `Inf`/`-Inf`: infinito.
+
+-   Funções: `is.na()`, `is.nan()`, `is.finite()`, `is.infinite()`.
+
+-   Tratamento de NAs:
+
+    ```{R}
+    dados <- c(1, NA, 3)
+    dados <- na.omit(dados)
+    mean(dados, na.rm=TRUE)
+    ```
+
+# 2. Estruturas de Dados
+
+## 2.1 Vetores Atômicos e Coerção
+
+-   Tipos: *numeric*, *integer*, *character*, *logical*, *complex*, *raw*.
+
+-   Hierarquia de coerção: *logical -\> integer -\> numeric -\> complex -\> character*.
+
+    ```{R}
+    misto <- c(TRUE, 2, "a")  # convertido para character
+    ```
+
+## 2.2 Fatores
+
+-   Dados categóricos com níveis fixos.
+
+    ```{R}
+    f <- factor(c("baixo","médio","alto"), levels=c("baixo","médio","alto"))
+    levels(f)
+    table(f)
+    ```
+
+-   Converter: `as.character(f)`, `as.numeric(f)`.
+
+## 2.3 Datas e Horários
+
+-   **Date**: `as.Date("2025-07-09")`, formatos `%Y-%m-%d`.
+
+-   **POSIXct/POSIXlt**: data-hora.
+
+    ```{R}
+    d <- as.Date("2025-07-09", "%Y-%m-%d")
+    dt <- as.POSIXct("2025-07-09 15:00:00")
+    ```
+
+-   Pacote **lubridate**:
+
+    ```{R}
+    library(lubridate)
+    ymd("20250709")
+    mdy("07-09-2025")
+    hms("15:00:00")
+    ```
+
+## 2.4 Listas
+
+-   Coleções heterogêneas ordenadas.
+
+-   Acesso: `[[ ]]` ou `$`.
+
+    ```{R}
+    lst <- list(nome="Igor", notas=c(90,95), aprovado=TRUE)
+    lst[["notas"]]
+    lst$aprovado
+    ```
+
+## 2.5 Data Frames e Tibbles
+
+-   Tabelas bidimensionais heterogêneas.
+
+    ```{R}
+    df <- data.frame(id=1:3, nota=c(10,20,15), stringsAsFactors=FALSE)
+    ```
+
+-   **Tibbles**:
+
+    ```{R}
+    library(tibble)
+    tb <- tibble(id=1:3, nota=c(10,20,15))
+    ```
+
+-   Inspeção: `str()`, `head()`, `glimpse()`.
+
+## 2.6 Matrizes e Arrays
+
+-   **Matriz**: bidimensional homogênea (`matrix()`).
+-   **Array**: estruturas com múltiplas dimensões (`array()`).
+-   Acesso: `[linha, coluna]` ou `[i,j,k]`.
+
+# 3. Importação e Manipulação de Dados
+
+## 3.1 Leitura de Dados
+
+-   CSV: `read.csv()`, `read_csv()` (readr).
+-   Excel: `readxl::read_excel()`.
+-   Alta performance: `data.table::fread()`, `vroom::vroom()`.
+
+## 3.2 Princípios de Dados Tidy
+
+-   Cada variável em uma coluna, cada observação em uma linha.
+-   **tidyr**:
+    -   `pivot_longer()`, `pivot_wider()`
+    -   `separate()`, `unite()`
+
+## 3.3 Workflow dplyr
+
+```{R}
+library(dplyr)
+df %>%
+  filter(nota > 10) %>%
+  select(id, nota) %>%
+  mutate(pct = nota / max(nota)) %>%
+  arrange(desc(pct))
+```
+
+-   Operações agrupadas:
+
+    ```{R}
+    df %>% group_by(id) %>% summarise(nota_media = mean(nota))
+    ```
+
+## 3.4 Conjuntos de Dados Embutidos
+
+O R disponibiliza diversos conjuntos de dados (datasets) prontos para uso, úteis para exemplos e testes:
+
+-   **iris**: medidas de sépalas e pétalas de três espécies de íris.
+-   **mtcars**: características de desempenho de diversos modelos de automóveis.
+-   **airquality**: medições diárias de qualidade do ar em Nova York.
+
+Para listar todos os datasets embutidos, use: data()
+
+Para carregar explicitamente um dataset:
+
+```{R}
+data(iris)
+head(iris)
+```
+
+# 4. Gráficos com ggplot2
+
+## 4.1 Componentes Básicos
+
+-   **ggplot(dados, aes(...))**: define dados e mapeamentos.
+-   Camadas **geom**: `geom_point()`, `geom_line()`, `geom_bar()`, `geom_histogram()`.
+-   Facetas: `facet_wrap()`, `facet_grid()`.
+
+## 4.2 Customização
+
+-   Temas: `theme_minimal()`, `theme_classic()`.
+-   Rótulos: `labs(title=, subtitle=, x=, y=, caption=)`.
+-   Legendas: `theme(legend.position = "bottom")`.
+
+## 4.3 Exemplos
+
+```{R}
+library(ggplot2)
+ggplot(mtcars, aes(x=wt, y=mpg, color=factor(cyl))) +
+  geom_point(size=3) +
+  facet_wrap(~cyl) +
+  labs(
+    title = "MPG vs Peso por Cilindro",
+    x = "Peso (1000 lbs)",
+    y = "Milhas por Galão"
+  ) +
+  theme_minimal()
+```
+
+```{R}
+# Histograma com densidade
+ggplot(iris, aes(x=Sepal.Length, fill=Species)) +
+  geom_histogram(alpha=0.6, position="identity", bins=30) +
+  geom_density(alpha=0.4) +
+  labs(title="Distribuição do Comprimento da Sépala")
+```
+
+# 5. Modelagem Estatística Básica
+
+## 5.1 Modelos Lineares (lm)
+
+```{R}
+modelo <- lm(nota ~ id + I(id^2), data=df)
+summary(modelo)
+```
+
+-   Interpretar coeficientes, p-valores, R² e resíduos.
+-   Diagnósticos: `plot(modelo)`.
+
+## 5.2 Modelos Lineares Generalizados (glm)
+
+```{R}
+df$aprovado <- df$nota >= 12
+glm_bin <- glm(aprovado ~ nota, family = binomial(link = "logit"), data = df)
+summary(glm_bin)
+```
+
+-   Familias: `binomial`, `poisson`, `Gamma`.
+-   Links: `logit`, `log`, `identity`.
+
+## 5.3 Avaliação de Modelos
+
+-   **Análise de resíduos**: `plot(modelo)`, **DHARMa** para GLMs.
+-   **Critérios de informação**: `AIC(modelo)`, `BIC(modelo)`.
+-   **Validação cruzada**: `caret::train()` ou **tidymodels**.
+
+# 6. Estruturas de Controle: Agrupamento, Loops e Condicionais
+
+## 6.1 Agrupamento com split, lapply, by e tapply
+
+-   **split()**: divide dados em grupos:
+
+    ```{R}
+    iris_split <- split(iris, iris$Species)
+    ```
+
+-   **lapply()**: aplica função a cada elemento:
+
+    ```{R}
+    media_sepala <- lapply(iris_split, function(df) mean(df$Sepal.Length))
+    ```
+
+-   **by()**: aplica função por grupos em data frame:
+
+    ```{R}
+    by(data = iris$Sepal.Length, INDICES = iris$Species, FUN = mean)
+    ```
+
+-   **tapply()**: aplica função a subsets de um vetor:
+
+    ```{R}
+    tapply(iris$Sepal.Length, iris$Species, mean)
+    ```
+
+## 6.2 Loops
+
+-   **for**:
+
+    ```{R}
+    for (i in 1:5) {
+      print(i^2)
+    }
+    ```
+
+-   **while**:
+
+    ```{R}
+    cont <- 1
+    while (cont <= 5) {
+      print(cont)
+      cont <- cont + 1
+    }
+    ```
+
+-   **repeat** (até break):
+
+    ```{R}
+    repeat {
+      val <- runif(1)
+      if (val > 0.9) {
+        print(val)
+        break
+      }
+    }
+    ```
+
+## 6.3 Condicionais
+
+-   **if / else**:
+
+    ```{R}
+    x <- -3
+    if (x > 0) {
+      message("Positivo")
+    } else if (x == 0) {
+      message("Zero")
+    } else {
+      message("Negativo")
+    }
+    ```
+
+-   **ifelse()** (vetorizado):
+
+    ```{R}
+    x <- c(-1, 0, 1)
+    resultado <- ifelse(x > 0, "Positivo", "Não positivo")
+    resultado
+    ```
+
+## 6.4 Boas Práticas
+
+-   Prefira funções vetorizadas (`apply`, `lapply`, `sapply`) em vez de loops explícitos.
+-   Use nomes descritivos e indentação consistente.
+-   Evite aninhamentos profundos; crie funções para lógicas complexas.

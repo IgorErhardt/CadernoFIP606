@@ -1,0 +1,179 @@
+---
+title: "Compendium"
+---
+
+### Funções Base do R / Estatísticas
+
+**`mean(x, na.rm = FALSE)`**\
+Calcula a média aritmética do vetor numérico `x`.\
+*Exemplo:* `mean(c(1,2,3))` → 2
+
+**`median(x, na.rm = FALSE)`**\
+Calcula a mediana (valor central) do vetor `x`.\
+*Exemplo:* `median(c(1,3,2))` → 2
+
+**`var(x, na.rm = FALSE)`**\
+Calcula a variância amostral do vetor `x`.
+
+**`sd(x, na.rm = FALSE)`**\
+Calcula o desvio padrão do vetor `x`.
+
+**`print(x, ...)`**\
+Exibe o valor de `x` no console.
+
+**`table(..., exclude = NULL, useNA = "no")`**\
+Cria tabelas de frequência a partir de vetores ou fatores.
+
+**`names(x)`**\
+Retorna ou atribui nomes aos elementos do objeto `x`.
+
+**`apply(X, MARGIN, FUN, ...)`**\
+Aplica a função `FUN` às linhas (`MARGIN = 1`) ou colunas (`MARGIN = 2`) de uma matriz ou array `X`.
+
+**`rowMeans(x, na.rm = FALSE)`**\
+Calcula a média por linha de uma matriz ou data frame.
+
+**`hist(x, breaks, main, xlab, ylab, ...)`**\
+Gera um histograma do vetor numérico `x`.
+
+**`shapiro.test(x)`**\
+Teste de normalidade de Shapiro-Wilk para o vetor `x`.\
+*Hipótese nula:* dados seguem distribuição normal.
+
+**`var.test(x, y)`**\
+Testa igualdade de variâncias entre duas amostras `x` e `y`.
+
+**`wilcox.test(x, y = NULL, paired = FALSE, ...)`**\
+Teste de Wilcoxon (sinalizado se pareado, ou Mann-Whitney U se não pareado) para comparação não paramétrica entre dois grupos.
+
+**`kruskal(x, g, ...)`** *(do pacote agricolae)*\
+Teste de Kruskal-Wallis para comparação de múltiplos grupos não paramétricos.
+
+**`aov(formula, data, ...)`**\
+Ajusta um modelo de análise de variância (ANOVA).
+
+**`summary(object, ...)`**\
+Produz um resumo estatístico de um objeto (ex: modelo ajustado).
+
+**`lm(formula, data, ...)`**\
+Ajusta um modelo de regressão linear.
+
+**`glm(formula, family = ..., data, ...)`**\
+Ajusta um modelo linear generalizado (ex: Poisson, binomial).
+
+**`plot(x, ...)`**\
+Função genérica para plotagem.
+
+**`predict(object, newdata, ...)`**\
+Gera predições a partir de um modelo ajustado.
+
+**`AIC(object, ...)`**\
+Calcula o Critério de Informação de Akaike para comparação de modelos.
+
+### Funções do dplyr / tidyverse
+
+**`filter(.data, ...)`**\
+Filtra linhas baseado em condições.\
+*Exemplo:* `filter(df, var == "A")`
+
+**`select(.data, ...)`**\
+Seleciona colunas de um data frame.
+
+**`pull(.data, var = -1)`**\
+Extrai uma coluna como vetor.
+
+**`mutate(.data, ...)`**\
+Cria ou modifica colunas em um data frame.
+
+**`group_by(.data, ...)`**\
+Agrupa dados para operações agrupadas.
+
+**`summarise(.data, ...)`**\
+Resume dados (ex: média, soma) em grupos.
+
+### Funções do ggplot2 para Visualização
+
+**`ggplot(data, aes(...))`**\
+Inicializa um gráfico ggplot com dados e mapeamentos estéticos.
+
+**`aes(x, y, ...)`**\
+Define mapeamentos estéticos, como variáveis para x e y.
+
+**`geom_histogram(binwidth, fill, color, ...)`**\
+Cria histograma.
+
+**`geom_boxplot(outlier.colour = NULL, ...)`**\
+Cria boxplots.
+
+**`geom_jitter(width, height, ...)`**\
+Adiciona pontos com jitter para evitar sobreposição.
+
+**`stat_summary(fun, geom, fun.data, ...)`**\
+Adiciona estatísticas resumidas (ex: média, barras de erro).
+
+**`geom_point(shape, size, color, fill, ...)`**\
+Adiciona pontos no gráfico.
+
+**`geom_smooth(method = "lm", se = TRUE, ...)`**\
+Adiciona linha de tendência suavizada (modelo linear por padrão).
+
+**`geom_errorbar(width, ...)`**\
+Adiciona barras de erro (ex: erro padrão).
+
+**`facet_wrap(~ var)`**\
+Cria subplots por níveis de uma variável.
+
+**`coord_flip()`**\
+Inverte os eixos x e y.
+
+**`scale_shape_manual(name, values)`**\
+Customiza formas no gráfico e legenda.
+
+**`scale_linetype_manual(name, values)`**\
+Customiza tipos de linha na legenda.
+
+**`guides(...)`**\
+Ajusta legendas.
+
+**`labs(title, x, y, color, caption, ...)`**\
+Adiciona títulos, legendas e rótulos.
+
+**`theme(...)`**\
+Ajusta elementos visuais do gráfico.
+
+**`scale_color_brewer(palette, name)`**\
+Aplica paleta de cores do ColorBrewer.
+
+### Funções para Avaliação de Modelos e Estatística Avançada
+
+**`car::Anova(model, ...)`**\
+Realiza análise de variância tipo II ou III em modelos ajustados.
+
+**`DHARMa::simulateResiduals(fittedModel, ...)`**\
+Simula resíduos para diagnóstico de modelos complexos.
+
+**`emmeans(object, specs, type = NULL, ...)`**\
+Calcula médias marginais estimadas (least squares means).
+
+**`cld(emmGrid, Letters = letters)`**\
+Produz letras compactas para agrupamento em comparações múltiplas.
+
+**`estimate_EC50(formula, data, isolate_col, strata_col, interval, fct, ...)`**\
+Estima a dose efetiva EC50 em modelos de dose-resposta.
+
+**`drm(formula, data, fct, ...)`**\
+Ajusta modelos de dose-resposta não lineares.
+
+**`LL.3()`**\
+Função log-logística de 3 parâmetros para dose-resposta.
+
+**`lmer(formula, data, ...)`**\
+Ajusta modelos lineares mistos.
+
+### Variados
+
+**`library(package)`**\
+Carrega um pacote R.
+
+**`gsheet2tbl(url)`**\
+Importa dados diretamente de uma planilha Google para um tibble/data frame.

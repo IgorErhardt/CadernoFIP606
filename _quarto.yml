@@ -1,0 +1,31 @@
+project:
+  type: website
+
+website:
+  title: "CadernoFIP606"
+  navbar:
+    left:
+      - href: Index.qmd
+        text: Home
+      - text: Análises
+        menu:
+          - href: AnáliseExploratória.qmd
+            text: Análise Exploratória
+          - href: AnáliseInferencial.qmd
+            text: Análise Paramétrica
+          - href: AnáliseInferencial_NParam.qmd
+            text: Análise Não Paramétrica
+          - href: GLMs.qmd
+            text: Modelos
+      - href: IntroR.qmd
+        text: Introdução R
+      - href: Compendium.qmd
+        text: Compêndio de funções
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+
+editor: visual

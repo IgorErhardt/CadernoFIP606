@@ -1,0 +1,16 @@
+---
+title: "Bem vindo!"
+---
+
+Bem-vindo(a) a meu caderno digitalda disciplina de **Análise e Visualização de Dados**.
+
+Nesse site busquei sintetizar as informações de programação em R e estatística passadas durante a discplina, de forma organizada e didática.
+
+Abordando os principais conceitos, técnicas e práticas apresentadas ao longo do curso, permitindo que você revisite e aprofunde seus conhecimentos.
+
+Aqui você encontrará:
+
+-   **Fundamentos de Análise de Dados**: conceitos essenciais sobre tipos de dados, estruturas e estatística descritiva.
+-   **Limpeza e Transformação**: estratégias para preparar seus conjuntos de dados, incluindo importação, tratamento de valores faltantes e normalização.
+-   **Exploração Visual**: introdução a diferentes tipos de gráficos e boas práticas para representar dados.
+-   **Casos Práticos e Exemplos**: aplicação dos conceitos em exercícios e projetos que ilustram o fluxo completo de análise, da aquisição ao compartilhamento dos resultados.

@@ -1,0 +1,35 @@
+{
+  "about.qmd": {
+    "about.html": "5a80ecb2"
+  },
+  "Análise exploratória.qmd": {
+    "Análise exploratória.html": "940addd9"
+  },
+  "AnáliseExploratória.qmd": {
+    "AnáliseExploratória.html": "065341f9"
+  },
+  "AnáliseInferencial.qmd": {
+    "AnáliseInferencial.html": "40786835"
+  },
+  "AnáliseInferencial_NParam.qmd": {
+    "AnáliseInferencial_NParam.html": "f84ee729"
+  },
+  "GLMs.qmd": {
+    "GLMs.html": "2c790ee5"
+  },
+  "index.qmd": {
+    "index.html": "f3477f22"
+  },
+  "Compendium.qmd": {
+    "Compendium.html": "3d67220f"
+  },
+  "Home.qmd": {
+    "Home.html": "281ad598"
+  },
+  "Index.qmd": {
+    "Index.html": "b014164b"
+  },
+  "IntroR.qmd": {
+    "IntroR.html": "e1a28320"
+  }
+}

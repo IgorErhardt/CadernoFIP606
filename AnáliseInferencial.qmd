@@ -1,0 +1,304 @@
+---
+title: "Análise paramétrica"
+warning: False
+---
+
+## Análise inferencial
+
+A estatística inferencial é o ramo da estatística responsável por permitir a inferência de conclusões sobre uma população com base na análise de uma amostra representativa. A inferência ocorre a partir do teste de hipoteses, que evidencia a diferença entre os fatores comparados. Amparado pelo valor de P, probabilidade da hipótese nula obter um resultado tão extremo quanto o observado. Além dos testes, a estatística inferencial inclui métodos de estimativa de parâmetros e intervalos de confiança, e fornece compreensão sobre sobre o efeito de preditores e gerar predições. Podemos classificar os teste entre paramétricos e não paramétricos baseados nas suposições sobre os dados que são requeridas para que sejam aplicados. Os paramétricos requerem que a distruição dos dados siga um padrão conhecido, enquanto os não paramétricos não requerem uma distribuição específica.
+
+Para aprendermos sobre estatítica inferencial paramétrica, vamos utilizar o conjunto de dados que contém o tamanho de colônias de fungos de diferentes espécies. Buscaremos identificar se há diferença entre as espécies, utilizando o teste T, Anova e teste de PosHoc
+
+```{R}
+library(tidyverse)
+library(ggpubr)
+library(report)
+library(rstatix)
+library(gsheet)
+library(emmeans)
+library(multcompView)
+library(multcomp)
+library(agricolae)
+library(DT)
+library(DHARMa)
+
+MiceliaDataframe = gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=959387827#gid=959387827")
+MiceliaDataframe
+```
+
+### Análise utilizando Anova (analysis of variance)
+
+Método estatístico paramétrico que visa identificar se há diferença significativa entre três ou mais grupos independentes, por comparação da variância. Possibilitando distinguir se a variação (Soma do quadrado dos resíduos), é explicada por aleatoriedade (Soma do quadrado dos resíduos em relação a média dos grupos) ou por características distinta dos grupos (Soma do quadrado dos resíduos em relação a média total).
+
+**Soma do quadrado dos resíduos:**
+
+Resíduos são a diferença entre o valor observado e uma média. Seja em relação a média total ou dentro de um grupo
+
+$$
+e_i \;=\; y_i \;-\; \hat y_i
+$$
+
+$$
+\begin{align*}e_i &\quad \text{é o resíduo da i-ésima observação (erro de predição)} \\y_i &\quad \text{é o valor observado da i-ésima observação} \\\hat{y}_i &\quad \text{é o valor previsto pelo modelo para a i-ésima observação}\end{align*}
+$$
+
+```{R}
+mean_global <- mean(MiceliaDataframe$tcm)
+MiceliaDataframe %>%
+  ggplot(aes(x = especie, y = tcm)) +
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(aes(color = especie), width = 0.2) +
+  stat_summary(
+    aes(shape = "Média por Espécie"),
+    fun    = mean,
+    geom   = "point",
+    size   = 3,
+    color  = "black",
+    fill   = "black"
+  ) +
+  geom_hline(
+    aes(
+      yintercept = mean_global,
+      linetype   = "Média Global"
+    ),
+    color = "black",
+    size  = 0.7
+  ) +
+  scale_shape_manual(
+    name   = "",
+    values = c("Média por Espécie" = 16)
+  ) +
+  scale_linetype_manual(
+    name   = "",
+    values = c("Média Global" = "solid")
+  ) +
+  guides(
+    shape    = guide_legend(override.aes = list(linetype = 0)),
+    linetype = guide_legend(override.aes = list(shape    = NA))
+  )
+
+```
+
+Elevando o resíduo ao quadrado almejamos a evidenciar grandes discrepâncias, a garantir que a soma total será uma mensuração de variabilidade absoluta e permite maior conveniência matemática. Uma vez que será uma função convexa conhecida dos parâmetros do modelo.
+
+Portanto podemos compreender a soma do quadrado dos resíduo como uma mensuração do quanto da variabilidade não é explicada pelo modelo.
+
+$$
+SQR_{\mathrm{res}}
+\;=\;
+\sum_{i=1}^n e_i^2
+\;=\;
+\sum_{i=1}^n (y_i - \hat y_i)^2
+$$
+
+$$
+\begin{align*}SQR_{\mathrm{res}} &\quad \text{é a Soma dos Quadrados dos Resíduos} \\\sum_{i=1}^n &\quad \text{indica a soma para todas as observações de i = 1 até n} \\e_i &\quad \text{é o resíduo da i-ésima observação (} e_i = y_i - \hat{y}_i \text{)} \\y_i &\quad \text{é o valor observado da i-ésima observação} \\\hat{y}_i &\quad \text{é o valor previsto pelo modelo para a i-ésima observação} \\n &\quad \text{é o número total de observações}\end{align*}
+$$
+
+Obtemos o valor de F através da razão entre a diferença entre as somas dos quadrados dos resíduos (SQR) divido pela diferença entre número de parâmetros dos modelos (P), e a SQR(grupo) dividido pela diferença entre o número de amostras pelo número de parâmetros do modelos da média total. F demostra a relação entre variabilidade entre os grupos e a aleatoriedade, dado a varibilidade interna de cada grupo. Portanto quando a variância explicada é maior que a variância não explicada F \> 1 ao menos um possui diferença significativa.
+
+$$
+F = \frac{\text{Variância explicada}}{\text{Variância não explicada}} = 
+\frac{
+  \displaystyle \frac{SS(\text{mean}) - SS(\text{fit})}{P(\text{fit}) - P(\text{mean})}
+}{
+  \displaystyle \frac{SS(\text{fit})}{n - P(\text{fit})}
+}
+$$O P-valor indicada a probabilidade de observar essa variabilidade ou outra ainda mais extrema, no caso de hipótese nula (H0: sem diferença entre grupos). Portanto ao obtermos um pequeno P-valor temos uma probabilidade baixa o suficiente para recursarmos H0 e adotarmos a hipótese alternativa (H1: há ao menos um grupo com diferença significativa), interpretando o como o fenômeno que ocorreu é improvável de ocorrer sob a condições de H0. O p-valor é obtido pela área abaixo da curva de distribuição de F, na qual temos a densidade de probabilidade em função dos valores de F, integrando os valores mais extremos que o F encontrado.
+
+![](P-valor.gif){fig-alt="Ilustração animada do p‑valor" fig-align="center"}
+
+#### Checagem das premissas
+
+Antes da aplicação de testes inferenciais, é essencial verificar se os dados atendem às suposições exigidas pelos modelos estatísticos. No caso da Anova as principais suposições são:
+
+-   **Normalidade dos resíduos**, avaliada por meio de testes como o *Shapiro-Wilk* e por inspeção visual de histogramas;
+
+-   **Homogeneidade de variâncias** entre os grupos, verificada por testes como *F de Fisher* (para duas amostras) ou *Bartlett* (para múltiplos grupos);
+
+-   **Independência das observações**, que garante que os valores analisados não estejam correlacionados entre si.
+
+A validação dessas suposições assegura a confiabilidade dos resultados e evita conclusões equivocadas.
+
+#### Normalidade
+
+Como passos iniciais da análise, vamos ajustar um modelo de análise da variância com a função aov(). Com o objetivo de avaliar se há diferença significativa entre o valor da variável 'tcm' de cada 'espécie'.\
+Para validar o uso do modelo, vamos verificar se os resíduos (diferenças entre as observações e os preditos) seguem a distribuição normal. A verificação pode ser feita de maneira visual, através do histograma dos resíduos. Ou de forma mais analítica como o teste de shapiro-wilk, que considera como hipotese nula que o comportamento difere da normalidade. Sendo assim necessário obter um P-valor maior do que Alfa (0.05) para confirmar a normalidade.
+
+```{R}
+# Teste de normalidade dos resíduos do modelo
+AnovaModel <- aov(tcm ~ especie, data = MiceliaDataframe)
+hist(residuals(AnovaModel), main = "Histograma dos Resíduos",
+     xlab='Resíduos', ylab = 'Frequência')
+shapiro.test(residuals(AnovaModel))
+```
+
+#### Homocedasticidade
+
+Outra suposição necessária para validar a aplicação do teste de Anova, é a homogenidade das variâncias. Uma teste comum que permite essa averiguação é o teste de bartlett, em que a hipótese nula assume que as variâncias dos tratamentos são iguais. Caso p-valor seja maior que alfa (0.05), confirmamos a homocedasticidade.
+
+```{R}
+# Teste de homogeneidade de variância
+bartlett.test(tcm ~ especie, data = MiceliaDataframe)
+```
+
+#### Tabela Anova
+
+A tabela de análise Anova, permite a avaliação dos resultados e performance do teste. Através dela podemos observar o grau de liberdade, soma e média dos quadrados dos resíduos, valor de F e P.
+
+```{R}
+summary(AnovaModel)
+```
+
+### Post-hoc
+
+Após análise de variância, e a detecção de que há diferenças significativas, seguimos investigando para identificar quas grupos são diferentes entre si. Para isso sçao comumente aplicados testes de Post-hoc, realizam a comparação todas as combinações possíveis entre os grupos enquanto se controla a chance de ocorrer falsos positivos ao ajustar o nível de significância.
+
+Como exemplo vamos utilizar EMMs (média marginal estimada) que utiliza médias ajustadas, corrigindo desequilíbrios no número de observações e efeito de covariáveis. \*
+
+Para facilitar a visualização, vamos organizar os grupo identificando-os como letras (a,b,c)
+
+```{R}
+# Comparação de médias com EMMeans
+em <- emmeans(AnovaModel, ~ especie)
+cld(em, Letters = letters)
+```
+
+### Tranformação dos dados
+
+Caso o conjunto de valores não siga a normalidade, uma alternativa é transformar os dados. Ajustando sua distribuição a normalidade. Utilizando o mesmo conjunto de dados iremos utilizar a raiz quadrada como forma de ajuste. A raiz quadrada permite a "compressão" dos valores de maneira proporcional a grandeza do valor, ajustando a simetria da distribuição. A analisarmos a distribuição dos resíduos novamente, podemos observar que foi averguado que os resíduos agora seguem a normalidade e homocedasticidade.
+
+```{R}
+InsectsDataframe = InsectSprays
+InsectLM = lm(sqrt(count) ~ spray, data=InsectsDataframe)
+plot(simulateResiduals(InsectLM))
+shapiro.test(residuals(InsectLM))
+
+Means = emmeans(InsectLM, ~ spray)
+cld(Means)
+```
+
+### Two-way Anova
+
+A Anova fatorial de dois fatores (Two‑Way ANOVA) estende a ideia da análise de variância unidirecional para investigar simultaneamente o efeito de duas variáveis categóricas sobre uma variável resposta contínua, bem como a existência de interação entre elas. Enquanto na Anova simples comparamos apenas médias de um fator, na Anova fatorial avaliamos:
+
+-   **Efeito principal de cada fator** — se diferentes níveis levam, isoladamente, a diferenças significativas.\
+
+-   **Interação entre fatores** — se o impacto de um fator depende do nível do outro.
+
+No exemplo abaixo iremos utilizar um conjunto de dados para investigar o efeito e diferentes doses de fungicidas diferentes sob a severidade. Ajustando um modelo linear com interação entre os fatores dose e tratamento, podemos observar que os resíduos atendem as pressuposições, e observar a tabela de análise de variâncai indicando que houve diferença significativa entre os grupos da variável 'treat', 'dose' e da interação entre as duas.
+
+```{R}
+FungicideDataframe = gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=2023059672#gid=2023059672")
+
+FungicideDataframe |>
+  ggplot(aes(factor(dose), severity*100))+
+  geom_boxplot(outlier.color=NULL)+
+  geom_jitter(width=0.1)+
+  facet_wrap(~treat)
+
+#
+MFungicide = lm(severity ~treat*dose, data=FungicideDataframe)
+hist(residuals(MFungicide))
+plot(simulateResiduals(MFungicide))
+anova(MFungicide)
+```
+
+```{R}
+# Visualizing significance interaction
+ggplot(FungicideDataframe, aes(x = dose, y = severity*100, 
+                                group = treat, color = treat)) +
+  stat_summary(fun = mean, geom = "line") +           # linhas de tendência
+  stat_summary(fun = mean, geom = "point", shape = 16) + # pontos médios
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.1) + # barras de erro (SE)
+  scale_color_brewer(palette = "Set1", name = "Tratamento") +
+  labs(
+    x     = "Dose",
+    y     = "Severidade (%)",
+    title = "Interação entre Dose e Tratamento na Severidade",
+    caption = "Médias com intervalo de erro padrão"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+```
+
+Para finalizar podemos identificar os grupos que apresentaram diferenças significativas, por nível de tratamento ou dose.
+
+```{R}
+MediasFungicideByDose = emmeans(MFungicide, ~treat|dose)
+cld(MediasFungicideByDose, Letters = letters)
+
+MediasFungicideByTreat = emmeans(MFungicide, ~dose|treat)
+cld(MediasFungicideByTreat, Letters = letters)
+```
+
+### Teste T
+
+Ou método comum para identificar se há diferença significativa entre médias é o teste T de Student. No teste T um valor de T é obtido e comparado a um valor tabelo em função do número de graus de liberdade. Caso o T valor seja maior que o valor crítico tabelado, a hipótese nula é rejeita (H0: Não há diferença significativa), adotando a hipótese alternativa de que há diferença significativa (H1).
+
+#### Independente
+
+Sua forma independente requer amostras que não exersem influência entre si, ou seja não há relação entre os valores. O valor de T é obtido através da razão entre a difereça das médias pelo erro padrão agrupado.
+
+$$
+\begin{align*}t &= \frac{\bar{X}_1 - \bar{X}_2}{\sqrt{\frac{s_1^2}{n_1} + \frac{s_2^2}{n_2}}} \\\\\ \\\bar{X}_1 &\quad \text{é a média da amostra do grupo 1} \\\bar{X}_2 &\quad \text{é a média da amostra do grupo 2} \\s_1^2 &\quad \text{é a variância da amostra do grupo 1} \\s_2^2 &\quad \text{é a variância da amostra do grupo 2} \\n_1 &\quad \text{é o tamanho da amostra do grupo 1} \\n_2 &\quad \text{é o tamanho da amostra do grupo 2} \\t &\quad \text{é o valor do teste t calculado}\end{align*}
+$$
+
+Como exemplo vamos utilizar um conjunto de dados com observaçõs de comprimento com e sem o uso de Mg2. Inicalmente vamos verificar a normalidade de homogenidade das variâncias, averiguando que os dados seguem a distribuição normal e os grupos possuem variância homogenea.
+
+```{R}
+MgDataframe <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=983033137#gid=983033137")
+MgDataframeWide <- MgDataframe |> 
+  pivot_wider(names_from = trat, values_from = comp)
+
+shapiro.test(MgDataframeWide$control)
+shapiro.test(MgDataframeWide$Mg2)
+
+var.test(MgDataframeWide$control, MgDataframeWide$Mg2)
+```
+
+Em seguida vamos performar o test t independent para verificar se houve diferença significativa entre os grupos. Constatando que há diferença entre os grupos.
+
+```{R}
+TResult_base <- t.test(
+  MgDataframeWide$control,
+  MgDataframeWide$Mg2,
+  var.equal = TRUE
+)
+tidy(TResult_base)
+```
+
+#### Pareado
+
+Amostras pareadas envolvem observações relacionadas em pares, onde cada elemento de um grupo está diretamente vinculado a um elemento do outro grupo.
+
+Seu valor de T é obtido pela equação abaixo:
+
+\
+$$
+\begin{align*}t &= \frac{\bar{d}}{s_d / \sqrt{n}}  \\\bar{d} &\quad \text{é a média das diferenças entre os pares de observações} \\s_d &\quad \text{é o desvio padrão das diferenças} \\n &\quad \text{é o número de pares de observações} \\t &\quad \text{é o valor do teste t calculado}\end{align*}
+$$
+
+Para ilustrar o teste T pareado vamos utilizar um conjunto de dados em que diferentes avaliadores realizaram classificações com e sem o auxílio de escala. É preciso somente verificar se a diferença entre as observações pareadas seguem a normalidade e o teste pode ser executado. Conforme podemos observar que houve diferença significativa\
+
+```{R}
+ScaleDataframe <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit?gid=1729131173#gid=1729131173")
+
+Unaided <- ScaleDataframe |> filter(assessment == "Unaided") |> pull(acuracia)
+Aided   <- ScaleDataframe |> filter(assessment == "Aided1")  |> pull(acuracia)
+
+differences <- Unaided - Aided
+shapiro.test(differences)
+
+ScaleTTest <- t.test(
+  Unaided,
+  Aided,
+  paired  = TRUE,
+  var.equal = FALSE
+)
+tidy(ScaleTTest)
+```
