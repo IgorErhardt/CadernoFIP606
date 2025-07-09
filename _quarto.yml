@@ -5,7 +5,7 @@ website:
   title: "CadernoFIP606"
   navbar:
     left:
-      - href: Index.qmd
+      - href: index.qmd
         text: Home
       - text: Análises
         menu:
